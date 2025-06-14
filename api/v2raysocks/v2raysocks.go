@@ -43,6 +43,7 @@ type APIClient struct {
 func New(apiConfig *api.Config) *APIClient {
 
 	client := resty.New()
+	client.SetHeader("User-Agent", "XrayR/0.9.6")
 	client.SetRetryCount(3)
 	if apiConfig.Timeout > 0 {
 		client.SetTimeout(time.Duration(apiConfig.Timeout) * time.Second)

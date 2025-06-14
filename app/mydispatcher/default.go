@@ -164,6 +164,7 @@ func (d *DefaultDispatcher) getLink(ctx context.Context) (*transport.Link, *tran
 	var user *protocol.MemoryUser
 	if sessionInbound != nil {
 		user = sessionInbound.User
+		sessionInbound.CanSpliceCopy = 3
 	}
 
 	if user != nil && len(user.Email) > 0 {
@@ -385,18 +386,6 @@ func sniffer(ctx context.Context, cReader *cachedReader, metadataOnly bool, netw
 func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.Link, destination net.Destination) {
 	outbounds := session.OutboundsFromContext(ctx)
 	ob := outbounds[len(outbounds)-1]
-	if hosts, ok := d.dns.(dns.HostsLookup); ok && destination.Address.Family().IsDomain() {
-		proxied := hosts.LookupHosts(ob.Target.String())
-		if proxied != nil {
-			ro := ob.RouteTarget == destination
-			destination.Address = *proxied
-			if ro {
-				ob.RouteTarget = destination
-			} else {
-				ob.Target = destination
-			}
-		}
-	}
 
 	var handler outbound.Handler
 
@@ -433,7 +422,11 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 			outTag := route.GetOutboundTag()
 			if h := d.ohm.GetHandler(outTag); h != nil {
 				isPickRoute = 2
-				errors.LogInfo(ctx, "taking detour [", outTag, "] for [", destination, "]")
+				if route.GetRuleTag() == "" {
+					errors.LogInfo(ctx, "taking detour [", outTag, "] for [", destination, "]")
+				} else {
+					errors.LogInfo(ctx, "Hit route rule: [", route.GetRuleTag(), "] so taking detour [", outTag, "] for [", destination, "]")
+				}
 				handler = h
 			} else {
 				errors.LogWarning(ctx, "non existing outTag: ", outTag)
@@ -441,10 +434,6 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 		} else {
 			errors.LogInfo(ctx, "default route for ", destination)
 		}
-	}
-
-	if handler == nil {
-		handler = d.ohm.GetHandler(inTag) // Default outbound handler tag should be as same as the inbound tag
 	}
 
 	// If there is no outbound with tag as same as the inbound tag
@@ -458,6 +447,8 @@ func (d *DefaultDispatcher) routedDispatch(ctx context.Context, link *transport.
 		common.Interrupt(link.Reader)
 		return
 	}
+
+	ob.Tag = handler.Tag()
 
 	if accessMessage := log.AccessMessageFromContext(ctx); accessMessage != nil {
 		if tag := handler.Tag(); tag != "" {
