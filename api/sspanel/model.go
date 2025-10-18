@@ -19,6 +19,7 @@ type CustomConfig struct {
 	OffsetPortNode string          `json:"offset_port_node"`
 	Host           string          `json:"host"`
 	Method         string          `json:"method"`
+	ServerKey      string          `json:"server_key"`
 	TLS            string          `json:"tls"`
 	EnableVless    string          `json:"enable_vless"`
 	Network        string          `json:"network"`

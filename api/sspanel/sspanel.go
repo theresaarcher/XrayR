@@ -824,6 +824,7 @@ func (c *APIClient) ParseSSPanelNodeInfo(nodeInfoResponse *NodeInfoResponse) (*a
 		EnableVless:       enableVless,
 		VlessFlow:         nodeConfig.Flow,
 		CypherMethod:      nodeConfig.Method,
+		ServerKey:         nodeConfig.ServerKey,
 		ServiceName:       nodeConfig.Servicename,
 		Header:            nodeConfig.Header,
 		EnableREALITY:     nodeConfig.EnableREALITY,
